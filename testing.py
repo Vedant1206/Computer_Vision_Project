@@ -1,8 +1,12 @@
-#all these methods are made for fun and testing github no significance to project
-class x:
-    def __init__(self, name):
-        self.name = name
 
-class Stack:
-    def __init__(self, name):
-        self.name = name
+import cv2
+
+if __name__ == '__main__':
+    image = cv2.imread('Picture/pic.JPG')
+    cv2.imshow('spic', image)
+
+    cv2.waitKey()
+    cv2.destroyAllWindows()
+
+
+
