@@ -1,35 +1,61 @@
-# photo analysis, video analysis
-import random
-
+from base64 import encodebytes
 import cv2
+import numpy as np
+import face_recognition as fr
+import os
 
-if __name__ == '__main__':
-    # -1, cv2.IMREAD_COLOR :load an color image
-    # 0, cv2.IMREAD_GRAYSCALE: load image in grayscale mode
-    # 1, cv2.IMREAD_UNCHANGED: load image colored without transparency
-    image = cv2.imread("Picture/Q4 2.PNG", -1)  # load in BGR
+path = 'Resources\People'
+images = []
+names = []
+list = os.listdir(path)
+print(list)
 
-    # print(image.shape)  #prints arry of color code
-    # image = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)  #resizing image to 50%
-    # image = cv2.resize(image, (600,400))       # changing size manually
-    # image = cv2.rotate(image, cv2.cv2.ROTATE_90_CLOCKWISE)
-    # image = cv2.imwrite("image var.jpg", image)  # this command will create a new picture
+for i in list:
+    curImg = cv2.imread(f'{path}/{i}')
+    images.append(curImg)
+    names.append(os.path.splitext(i)[0])
+print(names)
 
-    # copy image and paste it somewhere else
-    # tag = image[100:200, 400:800]
-    # image[200:300, 600:1000] = tag
+def findEncoding(images):
+       encodeList = []
+       for img in images:
+           #we have to convert in rgb
+           img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+           encode = fr.face_encodings(img)[0]
+           encodeList.append(encode)
+       return encodeList
 
-    cv2.imshow('Image', image)  # Image is printed
-    # wait an infinite amount of time for us to press any key. if instead of 0,
-    # i write 5, then it means 5 seconds
-    # as soon as i click anything, then destroy everything
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+encodeKnownList = findEncoding(images)
+print('Encoding complete')#len(encodeKnownList))
 
-"""
-    https://www.youtube.com/watch?v=wlYPhdTbRmk&list=PLzMcBGfZo4-lUA8uGjeXhBUUzPYc6vZRn&index=2
-    for i in range(10):
-        for j in range(image.shape[1]):
-            image[i][j] = [0, 0, 0]   # random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)]
-"""
+cap = cv2.VideoCapture(0)
+while True:
+    success, img = cap.read()
+    #resizing it because it will be faster
+    imgS = cv2.resize(img, (0,0), None, 0.25, 0.25)
+    imgS = cv2.cvtColor(imgS, cv2.COLOR_BGR2RGB)
 
+    facesFrame = fr.face_locations(imgS)
+    encodesFrame = fr.face_encodings(imgS, facesFrame)
+
+    for encodeFace, faceLoc in zip(encodesFrame, facesFrame):
+        matches = fr.compare_faces(encodeKnownList, encodeFace)
+        faceDis = fr.face_distance(encodeKnownList, encodeFace)
+        print(faceDis)
+        mainIndex = np.argmin(faceDis)
+        
+        if matches[mainIndex]:
+            name = names[mainIndex].upper()
+            print(name)
+            y1,x2,y2,x1 = faceLoc
+            y1, x2, y2, x1 = y1*4, x2*4, y2*4, x1*4
+            cv2.rectangle(img, (x1,y1), (x2,y2), (0,255,0),2)
+            cv2.rectangle(img, (x1,y1-35), (x2,y2), (0,255,0))
+            cv2.putText(img, name,(x1+5, y2-5), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255,255), 2)
+
+
+    cv2.imshow('Webcam', img)
+    if cv2.waitKey(1) == ord('q'):  # waitkey returns the value of the key so if we press d, break
+            break
+
+cv2.destroyAllWindows()
